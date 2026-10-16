@@ -3,17 +3,21 @@
 Welcome! This guide helps you get from zero to a running local development
 environment. Thanks for your interest in contributing!
 
+## Code of Conduct
+
+By participating in this project, you agree to follow the [Code of Conduct](./CODE_OF_CONDUCT.md).
+
 ---
 
 ## Prerequisites
 
-| Tool | Version | Notes |
-|---|---|---|
-| Node.js | 18+ | [nodejs.org](https://nodejs.org) |
-| npm | bundled with Node | or pnpm / bun |
-| Rust | stable | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` |
-| Soroban CLI | latest | `cargo install stellar-cli --locked` |
-| Freighter wallet | latest | [freighter.app](https://www.freighter.app/) — set to **Testnet** |
+| Tool             | Version           | Notes                                                            |
+| ---------------- | ----------------- | ---------------------------------------------------------------- |
+| Node.js          | 18+               | [nodejs.org](https://nodejs.org)                                 |
+| npm              | bundled with Node | or pnpm / bun                                                    |
+| Rust             | stable            | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs       | sh` |
+| Soroban CLI      | latest            | `cargo install stellar-cli --locked`                             |
+| Freighter wallet | latest            | [freighter.app](https://www.freighter.app/) — set to **Testnet** |
 
 ---
 
@@ -24,7 +28,7 @@ environment. Thanks for your interest in contributing!
 ```bash
 git clone https://github.com/FlowwStar/FlowStar.git
 cd FlowStar
-npm install --legacy-peer-deps   # also installs Husky pre-commit hooks via prepare script
+npm ci   # also installs Husky pre-commit hooks via prepare script
 ```
 
 ### 2. Configure environment variables
@@ -101,6 +105,40 @@ chore: bump soroban-sdk to v26 (#101)
 4. A maintainer will review. Address feedback by pushing new commits (don't
    force-push during review).
 5. PRs are squash-merged once approved and CI passes.
+
+---
+
+## Reward programs and campaign labels
+
+Some FlowStar issues are part of external open-source contribution programs, and these labels mark them. FlowStar itself does not pay contributors. **The external program decides whether a contribution is rewarded, how much, and when.** A label shows that an issue is part of a program. It does not guarantee a reward.
+
+### What the labels mean
+
+| Label                                          | Meaning                                                                                                               |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `Stellar Wave`                                 | The issue is part of the Stellar Wave program.                                                                        |
+| `GrantFox OSS`                                 | The issue is tracked in GrantFox's open-source program.                                                               |
+| `Maybe Rewarded`                               | The issue _may_ be eligible for a GrantFox reward. GrantFox decides whether it is.                                    |
+| `Official Campaign \| FWC26`, `Third Campaign` | The issue belongs to a specific time-boxed campaign in a program. Campaign rules and deadlines come from the program. |
+
+Issues without these labels are ordinary contributions. They are just as welcome, but no program tracks them.
+
+### Eligibility basics
+
+The program's own terms decide eligibility. On FlowStar's side:
+
+1. **Get assigned before starting.** Comment on the issue and wait for a maintainer to assign you. That way two people don't work on the same issue. If you start unassigned work on a program issue, it may not count.
+2. **Only merged PRs count.** Maintainers can only confirm contributions that went through the [PR process](#pr-process) and were merged into `main`. A PR that is opened but not merged will not count.
+3. **Link the issue.** Put `Closes #NNN` in the PR description and include the issue number in the branch name and commit messages (see above). That is how program tracking connects your PR to the labeled issue.
+4. **Stay inside the issue's scope.** Unrelated changes in the same PR slow down review and can hold up the merge.
+5. **Don't let an assigned issue go quiet.** If you can no longer work on it, say so on the issue so it can be reassigned.
+
+Security findings follow [SECURITY.md](./SECURITY.md) instead of this process. Report them privately, not in a labeled public issue.
+
+### Questions
+
+- Ask questions **about a specific issue** (scope, approach, assignment) in that issue's comments.
+- Ask questions **about the program itself** (payouts, reward amounts, deadlines, sign-up, account setup) through Stellar Wave's or GrantFox's own channels. FlowStar maintainers can't answer those for the program.
 
 ---
 
@@ -221,12 +259,12 @@ before merging.
 
 Scans `contracts/**/*.rs` for four classes of issues:
 
-| ID | Severity | What it catches |
-|---|---|---|
-| SOROBAN-001 | HIGH | Unchecked arithmetic (`+=`, `-=`, `*=`) on `i128`/`u128`/`u64` variables |
-| SOROBAN-002 | HIGH | Public write functions missing `require_auth()` |
-| SOROBAN-003 | HIGH | `persistent().set()` calls not paired with `extend_ttl()` |
-| SOROBAN-004 | LOW | `panic!("…")` with a string literal instead of `ContractError` |
+| ID          | Severity | What it catches                                                          |
+| ----------- | -------- | ------------------------------------------------------------------------ |
+| SOROBAN-001 | HIGH     | Unchecked arithmetic (`+=`, `-=`, `*=`) on `i128`/`u128`/`u64` variables |
+| SOROBAN-002 | HIGH     | Public write functions missing `require_auth()`                          |
+| SOROBAN-003 | HIGH     | `persistent().set()` calls not paired with `extend_ttl()`                |
+| SOROBAN-004 | LOW      | `panic!("…")` with a string literal instead of `ContractError`           |
 
 ```bash
 node scripts/soroban-security-check.mjs
@@ -263,11 +301,11 @@ cargo clippy
 
 Husky runs lint-staged on every commit:
 
-| File type | Checks |
-|---|---|
-| `*.ts`, `*.tsx` | ESLint (auto-fix) + Prettier |
-| `*.json`, `*.md`, `*.css` | Prettier |
-| `*.rs` | `cargo fmt --check` |
+| File type                 | Checks                       |
+| ------------------------- | ---------------------------- |
+| `*.ts`, `*.tsx`           | ESLint (auto-fix) + Prettier |
+| `*.json`, `*.md`, `*.css` | Prettier                     |
+| `*.rs`                    | `cargo fmt --check`          |
 
 To skip in an emergency: `git commit --no-verify`. Use sparingly.
 
@@ -279,6 +317,7 @@ If hooks aren't running after a fresh clone: `npm run prepare`. On CI, set
 ## Troubleshooting
 
 **Freighter not detected / connecting**
+
 - Confirm Freighter is set to **Testnet** (not Mainnet or Futurenet)
 - Make sure the extension is installed and enabled for `localhost`
 - Reload the page after unlocking Freighter
@@ -286,6 +325,7 @@ If hooks aren't running after a fresh clone: `npm run prepare`. On CI, set
 - Disable other wallet extensions that might conflict
 
 **RPC failures / transaction timeouts**
+
 - The Soroban testnet RPC (`https://soroban-testnet.stellar.org`) can be
   intermittently slow. Retry the operation.
 - Check [Stellar Status](https://status.stellar.org/) for any ongoing incidents.
@@ -293,6 +333,7 @@ If hooks aren't running after a fresh clone: `npm run prepare`. On CI, set
   `lib/stellar.ts`.
 
 **Contract deployment errors**
+
 - Ensure your deployer key is funded: `stellar keys fund deployer --network testnet`
 - If the WASM upload fails, try rebuilding: `stellar contract build` then redeploy
 - Check that `stellar-cli` is up to date: `cargo install stellar-cli --locked --force`
@@ -301,10 +342,12 @@ If hooks aren't running after a fresh clone: `npm run prepare`. On CI, set
 - `Error: account not found` usually means the key isn't funded yet
 
 **`npm install` fails on Husky**
+
 - Run `npm run prepare` manually to re-install hooks
 - If on CI, set `HUSKY=0` environment variable to skip hook installation
 
 **App running in mock mode unexpectedly**
+
 - Hard-refresh the browser (`Ctrl+Shift+R`) to clear any cached module state
 - Confirm that `NEXT_PUBLIC_STREAM_CONTRACT_ID_TESTNET` (or `_MAINNET`) is set
   in `.env.local` with a valid contract ID, and that the dev server was

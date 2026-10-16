@@ -23,6 +23,13 @@ import { VirtualStreamList } from '@/components/streams/virtual-stream-list'
 import { StreamGanttView } from '@/components/streams/stream-gantt-view'
 import { EmptyStreams } from '@/components/streams/empty-state'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useStreams } from '@/hooks/use-streams'
 import { useArchivedStreams } from '@/hooks/use-archived-streams'
 import { useNow } from '@/hooks/use-now'
@@ -34,14 +41,10 @@ import { useHiddenStreams } from '@/hooks/use-hidden-streams'
 import { useStreamsViewPreference } from '@/hooks/use-streams-view-preference'
 import { getStreamStatus, getWithdrawableAmount } from '@/lib/stream-utils'
 import type { StreamStatus } from '@/types/stream'
+import { streamsCopy, type SortOption } from '@/lib/copy/streams'
 
-const STATUS_FILTERS: { label: string; value: StreamStatus | 'all' }[] = [
-  { label: 'All', value: 'all' },
-  { label: 'Streaming', value: 'streaming' },
-  { label: 'Scheduled', value: 'scheduled' },
-  { label: 'Completed', value: 'completed' },
-  { label: 'Cancelled', value: 'cancelled' },
-]
+const SORT_OPTIONS = streamsCopy.filters.sortOptions
+const STATUS_FILTERS = streamsCopy.filters.statusFilters
 
 const TOKEN_OPTIONS = ['all', 'XLM', 'USDC', 'EURC'] as const
 
@@ -61,20 +64,20 @@ function ArchivedStreamRow({ streamId, onRemoved }: { streamId: string; onRemove
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
-      <span className="font-mono text-sm text-muted-foreground">Stream #{streamId}</span>
+      <span className="font-mono text-sm text-muted-foreground">{streamsCopy.archivedTab.streamPrefix(streamId)}</span>
       {confirming ? (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Remove permanently?</span>
+          <span className="text-xs text-muted-foreground">{streamsCopy.archivedTab.removePrompt}</span>
           <Button size="sm" variant="destructive" disabled={pending} onClick={handleRemove}>
-            {pending ? 'Removing…' : 'Confirm'}
+            {pending ? streamsCopy.archivedTab.removing : streamsCopy.archivedTab.confirmRemove}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-            Cancel
+            {streamsCopy.archivedTab.cancelRemove}
           </Button>
         </div>
       ) : (
         <Button size="sm" variant="outline" onClick={() => setConfirming(true)}>
-          Remove from history
+          {streamsCopy.archivedTab.removeFromHistory}
         </Button>
       )}
     </div>
@@ -87,13 +90,13 @@ function ArchivedStreamsTab() {
   const ids = [...new Set([...sent, ...received].map((id) => id))]
 
   if (loading && ids.length === 0) {
-    return <p className="text-muted-foreground py-12 text-center text-sm">Loading archive…</p>
+    return <p className="text-muted-foreground py-12 text-center text-sm">{streamsCopy.archivedTab.loading}</p>
   }
 
   if (ids.length === 0) {
     return (
       <p className="text-muted-foreground py-12 text-center text-sm">
-        No archived streams yet. Streams appear here once cancelled or fully withdrawn.
+        {streamsCopy.archivedTab.empty}
       </p>
     )
   }
@@ -115,7 +118,7 @@ function StreamsPage() {
   const { address } = useWallet()
   const { withdraw, cancel } = useContract()
   const [selectMode, setSelectMode] = useState(false)
-  const { hiddenIds, blockedSenders } = useHiddenStreams()
+  const { hiddenIds, blockedSenders, hideStream } = useHiddenStreams()
   const [showHidden, setShowHidden] = useState(false)
   const { view, setView } = useStreamsViewPreference()
   // Issue #688: Active vs Archived tab.
@@ -124,6 +127,7 @@ function StreamsPage() {
   const search = searchParams.get('q') ?? ''
   const statusFilter = (searchParams.get('status') ?? 'all') as StreamStatus | 'all'
   const tokenFilter = searchParams.get('token') ?? 'all'
+  const sortBy = (searchParams.get('sort') ?? 'default') as SortOption
 
   const isConcealed = (s: (typeof all)[number]) =>
     hiddenIds.has(s.id) || blockedSenders.has(s.sender)
@@ -165,6 +169,27 @@ function StreamsPage() {
       s.token.symbol.toLowerCase().includes(q)
     return matchesStatus && matchesToken && matchesSearch
   })
+
+  if (sortBy !== 'default') {
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'amount-desc':
+          return a.depositedAmount < b.depositedAmount ? 1 : a.depositedAmount > b.depositedAmount ? -1 : 0
+        case 'amount-asc':
+          return a.depositedAmount < b.depositedAmount ? -1 : a.depositedAmount > b.depositedAmount ? 1 : 0
+        case 'start-desc':
+          return a.startTime < b.startTime ? 1 : a.startTime > b.startTime ? -1 : 0
+        case 'start-asc':
+          return a.startTime < b.startTime ? -1 : a.startTime > b.startTime ? 1 : 0
+        case 'end-asc':
+          return a.endTime < b.endTime ? -1 : a.endTime > b.endTime ? 1 : 0
+        case 'end-desc':
+          return a.endTime < b.endTime ? 1 : a.endTime > b.endTime ? -1 : 0
+        default:
+          return 0
+      }
+    })
+  }
 
   const hasFilters = search || statusFilter !== 'all' || tokenFilter !== 'all'
 
@@ -212,15 +237,20 @@ function StreamsPage() {
     })
   }
 
+  const handleBulkHide = () => {
+    selectedItems.forEach((s) => hideStream(s.id))
+    exitSelectMode()
+  }
+
   return (
     <RequireWallet>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Streams</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{streamsCopy.header.title}</h1>
             <p className="text-muted-foreground text-sm">
-              All streams you&#39;ve sent or received.
+              {streamsCopy.header.description}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -229,10 +259,10 @@ function StreamsPage() {
               <span
                 className="text-muted-foreground flex items-center gap-1 text-xs"
                 aria-live="polite"
-                aria-label="Refreshing stream data"
+                aria-label={streamsCopy.header.refreshingAriaLabel}
               >
                 <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
-                Refreshing…
+                {streamsCopy.header.refreshing}
               </span>
             )}
             <Button
@@ -245,7 +275,7 @@ function StreamsPage() {
               }}
             >
               <Download className="mr-2 h-4 w-4" />
-              Download CSV
+              {streamsCopy.header.downloadCSV}
             </Button>
           </div>
         </div>
@@ -263,7 +293,7 @@ function StreamsPage() {
                 : 'border-transparent text-muted-foreground hover:text-foreground')
             }
           >
-            Active
+            {streamsCopy.tabs.active}
           </button>
           <button
             type="button"
@@ -277,7 +307,7 @@ function StreamsPage() {
             }
           >
             <Archive className="size-3.5" />
-            Archived
+            {streamsCopy.tabs.archived}
           </button>
         </div>
 
@@ -292,7 +322,7 @@ function StreamsPage() {
                   type="button"
                   onClick={() => setView('list')}
                   aria-pressed={view === 'list'}
-                  aria-label="List view"
+                  aria-label={streamsCopy.views.listAriaLabel}
                   className={
                     'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ' +
                     (view === 'list'
@@ -301,13 +331,13 @@ function StreamsPage() {
                   }
                 >
                   <LayoutList className="size-3.5" />
-                  <span className="hidden sm:inline">List</span>
+                  <span className="hidden sm:inline">{streamsCopy.views.list}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setView('compact')}
                   aria-pressed={view === 'compact'}
-                  aria-label="Compact view"
+                  aria-label={streamsCopy.views.compactAriaLabel}
                   className={
                     'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ' +
                     (view === 'compact'
@@ -316,13 +346,13 @@ function StreamsPage() {
                   }
                 >
                   <Rows3 className="size-3.5" />
-                  <span className="hidden sm:inline">Compact</span>
+                  <span className="hidden sm:inline">{streamsCopy.views.compact}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setView('timeline')}
                   aria-pressed={view === 'timeline'}
-                  aria-label="Timeline view"
+                  aria-label={streamsCopy.views.timelineAriaLabel}
                   className={
                     'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ' +
                     (view === 'timeline'
@@ -331,7 +361,7 @@ function StreamsPage() {
                   }
                 >
                   <GanttChartSquare className="size-3.5" />
-                  <span className="hidden sm:inline">Timeline</span>
+                  <span className="hidden sm:inline">{streamsCopy.views.timeline}</span>
                 </button>
               </div>
               <Button
@@ -344,8 +374,8 @@ function StreamsPage() {
                 {showHidden ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
                 <span className="hidden sm:inline">
                   {showHidden
-                    ? 'Showing hidden'
-                    : `Hidden${hiddenCount > 0 ? ` (${hiddenCount})` : ''}`}
+                    ? streamsCopy.hiddenToggle.showingHidden
+                    : streamsCopy.hiddenToggle.hiddenCount(hiddenCount)}
                 </span>
               </Button>
             </div>
@@ -361,7 +391,7 @@ function StreamsPage() {
                 data-testid="bulk-select-toggle"
               >
                 <ListChecks className="size-4" />
-                {selectMode ? 'Done selecting' : 'Select'}
+                {selectMode ? streamsCopy.bulkSelect.doneSelecting : streamsCopy.bulkSelect.select}
               </Button>
 
               {selectMode && (
@@ -373,7 +403,7 @@ function StreamsPage() {
                     className="size-4 accent-primary"
                     data-testid="bulk-select-all"
                   />
-                  Select all ({filtered.length})
+                  {streamsCopy.bulkSelect.selectAll(filtered.length)}
                 </label>
               )}
             </div>
@@ -382,7 +412,7 @@ function StreamsPage() {
             {selectMode && selected.size > 0 && (
               <div className="bg-muted flex flex-wrap items-center gap-2 rounded-lg p-3">
                 <span className="text-sm font-medium" data-testid="bulk-selected-count">
-                  {selected.size} selected
+                  {streamsCopy.bulkSelect.selectedCount(selected.size)}
                 </span>
                 <Button
                   size="sm"
@@ -392,7 +422,7 @@ function StreamsPage() {
                   data-testid="bulk-withdraw-button"
                 >
                   <ArrowDownToLine className="mr-2 h-4 w-4" />
-                  Withdraw ({eligibleWithdrawIds.length})
+                  {streamsCopy.bulkSelect.withdraw(eligibleWithdrawIds.length)}
                 </Button>
                 <Button
                   size="sm"
@@ -402,11 +432,21 @@ function StreamsPage() {
                   data-testid="bulk-cancel-button"
                 >
                   <Ban className="mr-2 h-4 w-4" />
-                  Cancel ({eligibleCancelIds.length})
+                  {streamsCopy.bulkSelect.cancel(eligibleCancelIds.length)}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isBulkRunning || selected.size === 0}
+                  onClick={handleBulkHide}
+                  data-testid="bulk-hide-button"
+                >
+                  <EyeOff className="mr-2 h-4 w-4" />
+                  {streamsCopy.bulkSelect.hideSelected(selected.size)}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => clear()}>
                   <X className="mr-2 h-4 w-4" />
-                  Clear
+                  {streamsCopy.bulkSelect.clear}
                 </Button>
               </div>
             )}
@@ -418,10 +458,10 @@ function StreamsPage() {
                 data-testid="bulk-results"
               >
                 <span>
-                  {succeeded} succeeded, {failed} failed
+                  {streamsCopy.bulkSelect.results(succeeded, failed)}
                 </span>
                 <Button size="sm" variant="ghost" onClick={reset}>
-                  Dismiss
+                  {streamsCopy.bulkSelect.dismiss}
                 </Button>
               </div>
             )}
@@ -431,7 +471,7 @@ function StreamsPage() {
               <div className="relative">
                 <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
                 <Input
-                  placeholder="Search by ID, address, or token…"
+                  placeholder={streamsCopy.filters.searchPlaceholder}
                   value={search}
                   onChange={(e) => setParam('q', e.target.value)}
                   className="pl-9"
@@ -453,9 +493,26 @@ function StreamsPage() {
                         : 'border-border bg-card text-muted-foreground hover:text-foreground')
                     }
                   >
-                    {t === 'all' ? 'All tokens' : t}
+                    {t === 'all' ? streamsCopy.filters.allTokens : t}
                   </button>
                 ))}
+              </div>
+
+              {/* Sort */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{streamsCopy.filters.sortByLabel}</span>
+                <Select value={sortBy} onValueChange={(v) => setParam('sort', v)}>
+                  <SelectTrigger className="h-8 w-[200px] text-xs" data-testid="streams-sort-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Status filter */}
@@ -482,9 +539,9 @@ function StreamsPage() {
             {filtered.length === 0 ? (
               hasFilters ? (
                 <div className="text-muted-foreground py-12 text-center">
-                  <p>No streams match your filters</p>
+                  <p>{streamsCopy.empty.noMatch}</p>
                   <Button size="sm" variant="ghost" onClick={clearFilters} className="mt-2">
-                    Clear filters
+                    {streamsCopy.empty.clearFilters}
                   </Button>
                 </div>
               ) : (

@@ -9,6 +9,8 @@ interface ProgressBarProps {
   indeterminateShimmer?: boolean
   /** Height variant. @default 'default' */
   size?: 'sm' | 'default' | 'lg'
+  /** Accessible name exposed as aria-label. @default 'Progress' */
+  label?: string
 }
 
 /** Shows the % of a stream that has unlocked, with an optional withdrawn marker. */
@@ -18,6 +20,7 @@ export function ProgressBar({
   marker,
   indeterminateShimmer,
   size = 'default',
+  label = 'Progress',
 }: ProgressBarProps) {
   const sizeClasses = {
     sm: 'h-1',
@@ -31,6 +34,7 @@ export function ProgressBar({
   return (
     <div
       role="progressbar"
+      aria-label={label}
       aria-valuenow={Math.round(pct)}
       aria-valuemin={0}
       aria-valuemax={100}

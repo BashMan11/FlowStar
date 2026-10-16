@@ -16,6 +16,13 @@ export interface WebhookConfig {
   events: WebhookEventType[]
   enabled: boolean
   createdAt: number
+  /**
+   * Per-webhook secret used to HMAC-sign every delivery (see
+   * `X-FlowStar-Signature` in `signPayload`). Generated once at registration
+   * time and never sent anywhere except as the signing key for this
+   * browser's own outgoing requests.
+   */
+  secret: string
 }
 
 export interface WebhookDelivery {
@@ -24,22 +31,76 @@ export interface WebhookDelivery {
   statusCode: number | null
   deliveredAt: number
   success: boolean
+  payload?: WebhookPayload
 }
 
 const STORAGE_KEY = 'flowstar_webhooks'
 const HISTORY_KEY = 'flowstar_webhook_history'
 const MAX_HISTORY = 50
 
+// Issue #821: version of the delivered payload shape, so integrators can
+// detect a future breaking change instead of guessing from field presence.
+// Bump only for breaking changes — see docs/WEBHOOKS.md for the policy.
+export const WEBHOOK_SCHEMA_VERSION = 1
+
 export interface WebhookPayload {
+  schema_version: number
   event: WebhookEventType | string
   timestamp: string
   data: Record<string, unknown>
 }
 
+function buildPayload(event: WebhookEventType, data: Record<string, unknown>): WebhookPayload {
+  return {
+    schema_version: WEBHOOK_SCHEMA_VERSION,
+    event,
+    timestamp: new Date().toISOString(),
+    data,
+  }
+}
+
+/** Header carrying the HMAC-SHA256 signature of the raw request body. */
+export const WEBHOOK_SIGNATURE_HEADER = 'X-FlowStar-Signature'
+
+/** Generates a random per-webhook signing secret (32 bytes, hex-encoded). */
+function generateSecret(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32))
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function bytesToHex(bytes: ArrayBuffer): string {
+  return Array.from(new Uint8Array(bytes))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+/**
+ * Computes `sha256=<hex hmac>` for `body`, keyed by `secret`, in the same
+ * format GitHub/Stripe use for their webhook signature headers. Verify by
+ * recomputing this over the exact raw request body you received (not a
+ * re-serialized copy) and comparing in constant time.
+ */
+async function signPayload(secret: string, body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body))
+  return `sha256=${bytesToHex(signature)}`
+}
+
 function loadWebhooks(): WebhookConfig[] {
   if (typeof window === 'undefined') return []
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+    const hooks: WebhookConfig[] = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
+    // Webhooks registered before HMAC signing have no secret; without one,
+    // deliveries would be signed with the literal key "undefined".
+    return hooks.map((h) => (h.secret ? h : { ...h, secret: generateSecret() }))
   } catch {
     return []
   }
@@ -77,17 +138,43 @@ function saveHistory(history: WebhookDelivery[]): boolean {
   }
 }
 
+/**
+ * POSTs `payload` to `url` with an HMAC signature, retrying on failure.
+ *
+ * Retry/backoff strategy:
+ * - Up to `retries` attempts total (default 3), i.e. the initial attempt plus
+ *   up to 2 retries.
+ * - A retry is scheduled after a non-2xx response or a thrown network error,
+ *   using exponential backoff: `1000 * 2 ** attempt` ms, so 1s, then 2s
+ *   (attempt is 0-indexed).
+ * - The final attempt never sleeps; it returns immediately with
+ *   `success: false` and the last observed `statusCode` (or `null` when the
+ *   request threw).
+ *
+ * The signature is computed once over the serialized body and reused across
+ * attempts, so retries deliver byte-identical payloads.
+ *
+ * @returns `{ statusCode, success }` — `statusCode` is the last HTTP status
+ *   seen (or `null` if the request never completed), and `success` is true
+ *   only when a response with `res.ok` was received.
+ */
 async function deliverWithRetry(
   url: string,
+  secret: string,
   payload: WebhookPayload,
   retries = 3,
 ): Promise<{ statusCode: number | null; success: boolean }> {
+  const body = JSON.stringify(payload)
+  const signature = await signPayload(secret, body)
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          [WEBHOOK_SIGNATURE_HEADER]: signature,
+        },
+        body,
       })
       if (res.ok) return { statusCode: res.status, success: true }
       if (attempt < retries - 1) await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt))
@@ -100,6 +187,31 @@ async function deliverWithRetry(
   return { statusCode: null, success: false }
 }
 
+/**
+ * Manages this browser's webhook registrations and their delivery history.
+ *
+ * State is persisted to `localStorage` (registrations under
+ * `flowstar_webhooks`, history under `flowstar_webhook_history`, capped at
+ * `MAX_HISTORY` entries) and hydrated on mount. Writes are guarded and, on
+ * failure, reported through the optional `onSaveError` callback at most once
+ * per failure streak (see issue #677).
+ *
+ * @param onSaveError Optional callback invoked the first time a persistence
+ *   write fails, so callers can surface a warning instead of silently losing
+ *   the write. Not called again until a subsequent write succeeds.
+ *
+ * @returns An object with:
+ * - `webhooks` — the current `WebhookConfig[]` registrations.
+ * - `history` — the most recent `WebhookDelivery[]`, newest first.
+ * - `addWebhook(url, events)` — registers a webhook and returns its newly
+ *   generated signing `secret` (shown once; not retrievable later).
+ * - `removeWebhook(id)` — deletes the registration with the given id.
+ * - `toggleWebhook(id)` — flips the `enabled` flag of the given registration.
+ * - `fireEvent(eventType, data)` — delivers `data` to every enabled webhook
+ *   subscribed to `eventType`, recording each attempt in `history`.
+ * - `resendDelivery(delivery)` — re-delivers a stored delivery's payload to
+ *   its webhook; resolves to whether the resend succeeded.
+ */
 export function useWebhooks(onSaveError?: () => void) {
   const [webhooks, setWebhooks] = useState<WebhookConfig[]>([])
   const [history, setHistory] = useState<WebhookDelivery[]>([])
@@ -128,19 +240,23 @@ export function useWebhooks(onSaveError?: () => void) {
   }, [])
 
   const addWebhook = useCallback(
-    (url: string, events: WebhookEventType[]) => {
+    (url: string, events: WebhookEventType[]): string => {
       const hook: WebhookConfig = {
         id: crypto.randomUUID(),
         url,
         events,
         enabled: true,
         createdAt: Date.now(),
+        secret: generateSecret(),
       }
       setWebhooks((prev) => {
         const next = [...prev, hook]
         reportSaveResult(saveWebhooks(next))
         return next
       })
+      // Returned so the caller can show it once — it's not otherwise
+      // retrievable from the UI after this point (see docs/WEBHOOKS.md).
+      return hook.secret
     },
     [reportSaveResult],
   )
@@ -171,14 +287,15 @@ export function useWebhooks(onSaveError?: () => void) {
     async (eventType: WebhookEventType, data: Record<string, unknown>) => {
       const active = webhooks.filter((h) => h.enabled && h.events.includes(eventType))
       for (const hook of active) {
-        const payload = { event: eventType, timestamp: new Date().toISOString(), data }
-        const result = await deliverWithRetry(hook.url, payload)
+        const payload = buildPayload(eventType, data)
+        const result = await deliverWithRetry(hook.url, hook.secret, payload)
         const delivery: WebhookDelivery = {
           webhookId: hook.id,
           eventType,
           statusCode: result.statusCode,
           deliveredAt: Date.now(),
           success: result.success,
+          payload,
         }
         setHistory((prev) => {
           const next = [delivery, ...prev]
@@ -190,20 +307,54 @@ export function useWebhooks(onSaveError?: () => void) {
     [webhooks, reportSaveResult],
   )
 
+  const resendDelivery = useCallback(
+    async (delivery: WebhookDelivery): Promise<boolean> => {
+      const hook = webhooks.find((h) => h.id === delivery.webhookId)
+      if (!hook || !delivery.payload) return false
+      const result = await deliverWithRetry(hook.url, hook.secret, delivery.payload)
+
+      const newDelivery: WebhookDelivery = {
+        webhookId: delivery.webhookId,
+        eventType: delivery.eventType,
+        statusCode: result.statusCode,
+        deliveredAt: Date.now(),
+        success: result.success,
+        payload: delivery.payload,
+      }
+      setHistory((prev) => {
+        const next = [newDelivery, ...prev]
+        reportSaveResult(saveHistory(next))
+        return next
+      })
+      return result.success
+    },
+    [webhooks, reportSaveResult],
+  )
+
   const testWebhook = useCallback(
     async (id: string): Promise<boolean> => {
       const hook = webhooks.find((h) => h.id === id)
       if (!hook) return false
       const payload = {
+        schema_version: WEBHOOK_SCHEMA_VERSION,
         event: 'stream.created',
         timestamp: new Date().toISOString(),
         data: { stream_id: 0, note: 'FlowStar webhook test' },
       }
-      const result = await deliverWithRetry(hook.url, payload, 1)
+      const result = await deliverWithRetry(hook.url, hook.secret, payload, 1)
       return result.success
     },
     [webhooks],
   )
 
-  return { webhooks, history, addWebhook, removeWebhook, toggleWebhook, fireEvent, testWebhook }
+  return {
+    webhooks,
+    history,
+    addWebhook,
+    removeWebhook,
+    toggleWebhook,
+    fireEvent,
+    testWebhook,
+    resendDelivery,
+  }
 }

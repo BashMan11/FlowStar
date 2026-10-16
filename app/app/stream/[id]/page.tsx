@@ -1017,6 +1017,7 @@ function StreamDetail({ id }: { id: string }) {
         <div>
           <ProgressBar
             value={progress}
+            label="Stream unlock progress"
             marker={withdrawnFrac}
             indeterminateShimmer={status === 'streaming'}
           />

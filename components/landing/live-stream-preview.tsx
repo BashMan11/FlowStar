@@ -76,7 +76,11 @@ export function LiveStreamPreview() {
       </div>
 
       <div className="mt-5">
-        <ProgressBar value={progress} indeterminateShimmer />
+        <ProgressBar
+          value={progress}
+          indeterminateShimmer
+          label="Stream unlock progress"
+        />
         <div className="mt-2 flex justify-between text-xs text-muted-foreground">
           <span>{(progress * 100).toFixed(2)}% unlocked</span>
           <span className="font-mono">

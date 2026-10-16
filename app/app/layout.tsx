@@ -6,7 +6,12 @@ import { MockModeBanner } from '@/components/layout/mock-mode-banner'
 import { PageErrorBoundary } from '@/components/error-boundary/page-error-boundary'
 
 export const metadata: Metadata = {
-  title: 'Dashboard',
+  // Re-declare the template: a plain-string title here would reset it and
+  // every /app/* page would lose the "| FlowStar" suffix (issue #900).
+  title: {
+    template: '%s | FlowStar',
+    default: 'Dashboard',
+  },
   description: 'Manage your active and historical token streams on Stellar.',
 }
 
