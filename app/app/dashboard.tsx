@@ -17,11 +17,12 @@ import { useContract } from '@/hooks/use-contract'
 import { useNow } from '@/hooks/use-now'
 import { useHiddenStreams } from '@/hooks/use-hidden-streams'
 import { getWithdrawableAmount } from '@/lib/stream-utils'
+import { dashboardCopy } from '@/lib/copy/dashboard'
 import type { StreamData } from '@/types/stream'
 
 export function Dashboard() {
   const {
-    sent,
+    sent: allSent,
     received: allReceived,
     all: allStreams,
     loading,
@@ -31,13 +32,21 @@ export function Dashboard() {
   } = useStreams()
   const { withdrawAll, pending } = useContract()
   const now = useNow(1000)
-  const { hiddenIds, blockedSenders } = useHiddenStreams()
+  const { hiddenIds, blockedSenders, pinnedIds } = useHiddenStreams()
 
   // Hidden streams (and streams from blocked senders) never appear on the
   // dashboard — neither in the lists nor in the counts (issue #151).
   const isVisible = (s: StreamData) => !hiddenIds.has(s.id) && !blockedSenders.has(s.sender)
-  const received = allReceived.filter(isVisible)
-  const all = allStreams.filter(isVisible)
+
+  // Pinned streams float to the top of every tab (issue #835).
+  const sortPinned = (arr: StreamData[]) => [
+    ...arr.filter((s) => pinnedIds.has(s.id)),
+    ...arr.filter((s) => !pinnedIds.has(s.id)),
+  ]
+
+  const received = sortPinned(allReceived.filter(isVisible))
+  const all = sortPinned(allStreams.filter(isVisible))
+  const sent = sortPinned(allSent)
   const [withdrawProgress, setWithdrawProgress] = useState<{
     current: number
     total: number
@@ -63,10 +72,8 @@ export function Dashboard() {
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground text-sm">
-              Your active and historical token streams.
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight">{dashboardCopy.header.title}</h1>
+            <p className="text-muted-foreground text-sm">{dashboardCopy.header.description}</p>
           </div>
           <div className="flex items-center gap-2">
             {/* "Refreshing…" indicator — shown briefly on tab re-focus after a
@@ -75,10 +82,10 @@ export function Dashboard() {
               <span
                 className="text-muted-foreground flex items-center gap-1 text-xs"
                 aria-live="polite"
-                aria-label="Refreshing stream data"
+                aria-label={dashboardCopy.header.refreshingAriaLabel}
               >
                 <RefreshCw className="h-3 w-3 animate-spin" aria-hidden />
-                Refreshing…
+                {dashboardCopy.header.refreshing}
               </span>
             )}
             {withdrawableStreams.length > 0 && (
@@ -91,8 +98,11 @@ export function Dashboard() {
               >
                 <ArrowDownToLine className="mr-2 h-4 w-4" />
                 {isWithdrawingAll
-                  ? `Withdrawing ${withdrawProgress.current}/${withdrawProgress.total}…`
-                  : `Withdraw all (${withdrawableStreams.length})`}
+                  ? dashboardCopy.header.withdrawingAll(
+                      withdrawProgress.current,
+                      withdrawProgress.total,
+                    )
+                  : dashboardCopy.header.withdrawAll(withdrawableStreams.length)}
                 <span className="sr-only">
                   {isWithdrawingAll
                     ? `${withdrawProgress.current}/${withdrawProgress.total}`
@@ -103,7 +113,7 @@ export function Dashboard() {
             <Button size="sm" asChild>
               <Link href="/app/create">
                 <Plus className="mr-2 h-4 w-4" />
-                New stream
+                {dashboardCopy.header.newStream}
               </Link>
             </Button>
           </div>
@@ -120,9 +130,10 @@ export function Dashboard() {
           >
             <WifiOff className="size-4 shrink-0" />
             <span>
-              You&apos;re offline — showing cached stream data
-              {lastUpdated && ` from ${new Date(lastUpdated).toLocaleString()}`}. It may be
-              outdated.
+              {dashboardCopy.offlineBanner.message}
+              {lastUpdated &&
+                dashboardCopy.offlineBanner.fromTime(new Date(lastUpdated).toLocaleString())}
+              {dashboardCopy.offlineBanner.outdatedWarning}
             </span>
           </div>
         )}
@@ -139,9 +150,11 @@ export function Dashboard() {
         {/* Stream list */}
         <Tabs defaultValue="all">
           <TabsList>
-            <TabsTrigger value="all">All ({all.length})</TabsTrigger>
-            <TabsTrigger value="receiving">Receiving ({received.length})</TabsTrigger>
-            <TabsTrigger value="sending">Sending ({sent.length})</TabsTrigger>
+            <TabsTrigger value="all">{dashboardCopy.tabs.all(all.length)}</TabsTrigger>
+            <TabsTrigger value="receiving">
+              {dashboardCopy.tabs.receiving(received.length)}
+            </TabsTrigger>
+            <TabsTrigger value="sending">{dashboardCopy.tabs.sending(sent.length)}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="mt-4">

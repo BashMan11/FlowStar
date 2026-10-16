@@ -150,7 +150,8 @@ export function Navbar() {
       <nav className="overflow-x-auto border-t border-border px-4 py-2 md:hidden">
         <div className="flex items-center gap-1">
           {NAV_LINKS.map((link) => {
-            const active = link.href === '/app' ? pathname === '/app' : pathname.startsWith(link.href)
+            const active =
+              link.href === '/app' ? pathname === '/app' : pathname.startsWith(link.href)
             return (
               <Link
                 key={link.href}

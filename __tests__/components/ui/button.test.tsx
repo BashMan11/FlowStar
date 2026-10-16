@@ -106,7 +106,7 @@ describe('Button', () => {
       const { container } = render(
         <Button asChild>
           <a href="/test">Link Button</a>
-        </Button>
+        </Button>,
       )
       const link = container.querySelector('a')
       expect(link).toBeInTheDocument()
@@ -118,7 +118,7 @@ describe('Button', () => {
       const { container } = render(
         <Button variant="secondary" size="sm" asChild>
           <a href="/test">Link Button</a>
-        </Button>
+        </Button>,
       )
       const link = container.querySelector('a')
       expect(link?.className).toContain('bg-secondary')
