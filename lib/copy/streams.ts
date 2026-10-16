@@ -14,6 +14,7 @@ export type SortOption =
   | 'end-desc'
 
 export const streamsCopy = {
+  tokenOptions: ['all', 'XLM', 'USDC', 'EURC'] as const,
   header: {
     title: 'Streams',
     description: "All streams you've sent or received.",

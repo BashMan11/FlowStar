@@ -46,8 +46,6 @@ import { streamsCopy, type SortOption } from '@/lib/copy/streams'
 const SORT_OPTIONS = streamsCopy.filters.sortOptions
 const STATUS_FILTERS = streamsCopy.filters.statusFilters
 
-const TOKEN_OPTIONS = ['all', 'XLM', 'USDC', 'EURC'] as const
-
 // Issue #688: read-only card for the Archived tab. Archived streams are
 // terminal (cancelled, or fully withdrawn past end_time) so none of the
 // active-stream actions (withdraw/cancel/select) apply — just the option to
@@ -481,7 +479,7 @@ function StreamsPage() {
 
               {/* Token filter */}
               <div className="flex flex-wrap gap-2">
-                {TOKEN_OPTIONS.map((t) => (
+                {streamsCopy.tokenOptions.map((t) => (
                   <button
                     key={t}
                     onClick={() => setParam('token', t)}
