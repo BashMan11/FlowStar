@@ -18,6 +18,12 @@ importantly — how Playwright visual snapshot baselines are managed.
 ## Unit tests (Vitest)
 
 ```bash
+npm test          # single run
+npm run test:watch  # watch mode
+```
+
+Tests live in `lib/__tests__/` and cover unlock math, formatters, and utility
+functions.
 npm test            # single run
 npm run test:watch  # watch mode
 ```
