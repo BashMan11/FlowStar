@@ -18,12 +18,48 @@ importantly — how Playwright visual snapshot baselines are managed.
 ## Unit tests (Vitest)
 
 ```bash
-npm test          # single run
+npm test            # single run
 npm run test:watch  # watch mode
 ```
 
-Tests live in `lib/__tests__/` and cover unlock math, formatters, and utility
-functions.
+### Where tests live
+
+All unit tests must be placed under `__tests__/` at the repo root, following
+the naming convention `**/*.{test,spec}.{ts,tsx}`. Files placed elsewhere
+(e.g. alongside source files under `components/` or `lib/`) are **not
+collected by Vitest** and will never run.
+
+```
+__tests__/
+  lib/
+    unlock-math.test.ts
+    formatters.test.ts
+  hooks/
+    use-stream.test.ts
+```
+
+### Runner: Vitest, not Jest
+
+The project uses [Vitest](https://vitest.dev/). Use `vi` for all mocking and
+spying — **not** `jest`:
+
+```ts
+import { describe, it, expect, vi } from "vitest";
+
+// ✅ correct
+const spy = vi.fn();
+vi.spyOn(module, "method");
+vi.useFakeTimers();
+
+// ❌ wrong — jest is not installed
+const spy = jest.fn();
+```
+
+### Running a single file
+
+```bash
+npx vitest run __tests__/lib/unlock-math.test.ts
+```
 
 ---
 

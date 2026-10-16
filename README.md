@@ -145,7 +145,7 @@ cargo test
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js ≥ 22.22.1 — use [nvm](https://github.com/nvm-sh/nvm) and run `nvm use` in the repo root (the `.nvmrc` will pick the right version automatically)
 - [Freighter](https://www.freighter.app/) browser extension (set to Testnet)
 
 ### Install & run

@@ -7,6 +7,8 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     globals: true,
     exclude: ["e2e/**", "node_modules/**"],
+    // Tests must live in __tests__/**/*.{test,spec}.{ts,tsx}.
+    // Files placed elsewhere (e.g. components/, lib/) are not collected.
     include: ["__tests__/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
       provider: "v8",

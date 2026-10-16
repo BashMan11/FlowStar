@@ -113,8 +113,28 @@ npm test               # run once
 npm run test:watch     # watch mode
 ```
 
-Tests live in `lib/__tests__/`. The suite covers unlock math, formatters, and
-utility functions.
+All unit tests must live under `__tests__/` at the repo root and follow the
+naming convention `**/*.{test,spec}.{ts,tsx}`. Vitest only collects files from
+that directory — files placed alongside source code (e.g. under `components/`
+or `lib/`) are silently ignored and will never run.
+
+The runner is [Vitest](https://vitest.dev/). Use `vi` for mocking, **not**
+`jest`:
+
+```ts
+import { describe, it, expect, vi } from "vitest";
+
+const spy = vi.fn();       // ✅
+const spy = jest.fn();     // ❌ jest is not installed
+```
+
+To run a single test file:
+
+```bash
+npx vitest run __tests__/lib/unlock-math.test.ts
+```
+
+The suite covers unlock math, formatters, and utility functions.
 
 ### E2E tests (Playwright)
 
@@ -150,6 +170,81 @@ cargo test
 
 44 tests covering the full stream lifecycle, authorization, cliff edge cases,
 overdraw protection, integer math, and self-streams.
+
+---
+
+## Storybook
+
+FlowStar uses [Storybook](https://storybook.js.org/) to develop and document UI
+components in isolation. Stories live alongside their components as
+`*.stories.tsx` files under `components/`.
+
+### Running Storybook
+
+```bash
+npm run storybook
+```
+
+Opens the Storybook UI at [http://localhost:6006](http://localhost:6006). The
+dev server hot-reloads on file changes — no restart needed.
+
+### Building a static version
+
+```bash
+npm run storybook:build
+```
+
+Output goes to `storybook-static/`. Useful for CI artifact uploads or
+previewing the docs site locally.
+
+### Writing stories
+
+Stories use the [Component Story Format (CSF3)](https://storybook.js.org/docs/api/csf)
+with TypeScript. Follow the existing pattern in `components/ui/badge.stories.tsx`
+and `components/ui/button.stories.tsx`:
+
+```tsx
+import type { Meta, StoryObj } from "@storybook/react";
+import { MyComponent } from "./my-component";
+
+const meta = {
+  title: "UI/MyComponent",      // determines the sidebar path in Storybook
+  component: MyComponent,
+  parameters: { layout: "centered" },
+  tags: ["autodocs"],           // enables the auto-generated Docs page
+} satisfies Meta<typeof MyComponent>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {
+  args: { /* props */ },
+};
+```
+
+A few conventions to follow:
+
+- **File location**: place the story file next to the component it documents,
+  e.g. `components/ui/my-component.stories.tsx`.
+- **`title` path**: mirror the folder structure — `UI/`, `Streams/`, `Layout/`,
+  `Landing/` match the subdirectories under `components/`.
+- **`autodocs` tag**: include `tags: ["autodocs"]` on every new story so the
+  Docs tab is generated automatically.
+- **`argTypes`**: define `argTypes` for any prop that benefits from a Storybook
+  control (select, boolean, range, etc.) so reviewers can interact with
+  variants without editing code.
+- **Named exports**: each meaningful variant gets its own named export (e.g.
+  `Default`, `Disabled`, `AllVariants`). Avoid a single catch-all story.
+
+### Configuration
+
+| File | Purpose |
+|---|---|
+| `.storybook/main.ts` | Story glob (`components/**/*.stories.ts?(x)`), addons, Next.js framework |
+| `.storybook/preview.ts` | Global parameters, `controls` matchers, and `globals.css` import |
+
+The framework is `@storybook/nextjs`, so Next.js features (Image, Link, App
+Router) work inside stories without extra mocking.
 
 ---
 
