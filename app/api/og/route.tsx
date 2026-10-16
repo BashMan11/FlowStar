@@ -1,8 +1,8 @@
-import { ImageResponse } from '@vercel/og'
+import { ImageResponse } from 'next/og'
 import { shortenAddress } from '@/lib/stream-utils'
 import { captureError } from '@/lib/sentry'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 interface OGParams {
   amount?: string
