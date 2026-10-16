@@ -118,7 +118,7 @@ A deployment that passed verification can still fail later: frontend errors, exp
 
 ### Frontend errors (Sentry)
 
-The frontend reports errors to Sentry through `@sentry/nextjs` ([sentry.client.config.ts](sentry.client.config.ts), [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), and the wrapper in [lib/sentry.ts](lib/sentry.ts)). It is **enabled only when `NODE_ENV === "production"`**, so nothing is reported from `npm run dev`.
+The frontend reports errors to Sentry through `@sentry/nextjs` ([instrumentation-client.ts](instrumentation-client.ts), [sentry.server.config.ts](sentry.server.config.ts), [sentry.edge.config.ts](sentry.edge.config.ts), and the wrapper in [lib/sentry.ts](lib/sentry.ts)). It is **enabled only when `NODE_ENV === "production"`**, so nothing is reported from `npm run dev`.
 
 Set these in the production environment (see `.env.local.example`):
 
