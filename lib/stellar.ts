@@ -1,4 +1,5 @@
 import { rpc, StrKey } from '@stellar/stellar-sdk'
+import { captureError } from './sentry'
 
 /**
  * The two networks FlowStar supports.
@@ -164,7 +165,7 @@ async function loadVerifiedTokens(): Promise<VerifiedTokenEntry[]> {
     verifiedTokensCache = data.tokens
     return data.tokens
   } catch (error) {
-    console.warn('Failed to load verified tokens list:', error)
+    void captureError(error, { operation: 'loadVerifiedTokens' })
     return []
   }
 }
@@ -357,7 +358,7 @@ export async function checkAccountInfo(
       transactionCount: Object.keys(data.data ?? {}).length,
     }
   } catch (error) {
-    console.error('Error checking account info:', error)
+    void captureError(error, { operation: 'checkAccountInfo' })
     return { exists: false, funded: false, transactionCount: 0, error: 'Network error' }
   }
 }
@@ -392,7 +393,7 @@ export async function getXlmBalance(address: string, network: NetworkName): Prom
     const xlmAmount = parseFloat(nativeBalance.balance)
     return BigInt(Math.floor(xlmAmount * 1e7))
   } catch (error) {
-    console.error('Error fetching XLM balance:', error)
+    void captureError(error, { operation: 'getXlmBalance' })
     return null
   }
 }

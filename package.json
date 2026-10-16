@@ -2,6 +2,9 @@
   "name": "flowstar",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.22.1"
+  },
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
@@ -15,7 +18,8 @@
     "prepare": "husky",
     "analyze": "ANALYZE=true next build --webpack",
     "storybook": "storybook dev -p 6006",
-    "storybook:build": "storybook build"
+    "storybook:build": "storybook build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@albedo-link/intent": "^0.13.0",
