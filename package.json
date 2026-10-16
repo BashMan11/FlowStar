@@ -15,7 +15,8 @@
     "prepare": "husky",
     "analyze": "ANALYZE=true next build --webpack",
     "storybook": "storybook dev -p 6006",
-    "storybook:build": "storybook build"
+    "storybook:build": "storybook build",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@albedo-link/intent": "^0.13.0",

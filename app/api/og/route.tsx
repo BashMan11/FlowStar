@@ -1,5 +1,6 @@
 import { ImageResponse } from '@vercel/og'
 import { shortenAddress } from '@/lib/stream-utils'
+import { captureError } from '@/lib/sentry'
 
 export const runtime = 'edge'
 
@@ -150,7 +151,7 @@ export async function GET(request: Request) {
       },
     )
   } catch (error) {
-    console.error('OG image generation error:', error)
+    void captureError(error, { operation: 'og-image:generate' })
     return new Response('Failed to generate OG image', { status: 500 })
   }
 }

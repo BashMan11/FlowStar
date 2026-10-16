@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { fetchStream } from "@/lib/contract";
 import { NETWORK } from "@/lib/stellar";
 import { shortenAddress } from "@/lib/stream-utils";
+import { captureError } from "@/lib/sentry";
 
 export async function generateMetadata({
   params,
@@ -67,7 +68,7 @@ export async function generateMetadata({
       },
     };
   } catch (error) {
-    console.error("Failed to generate metadata:", error);
+    void captureError(error, { operation: "stream-metadata:generate" });
     return {
       title: "Stream | FlowStar",
       description: "Stream tokens by the second on Stellar",

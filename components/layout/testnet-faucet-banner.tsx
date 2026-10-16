@@ -7,6 +7,7 @@ import { useWallet } from '@/hooks/use-wallet'
 import { useNetwork } from '@/components/providers/network-provider'
 import { getXlmBalance } from '@/lib/stellar'
 import { toast } from 'sonner'
+import { captureError } from '@/lib/sentry'
 
 interface TestnetFaucetBannerProps {
   onClose?: () => void
@@ -99,7 +100,7 @@ export function TestnetFaucetBanner({ onClose }: TestnetFaucetBannerProps) {
         onClose?.()
       }, AUTO_DISMISS_DELAY_MS)
     } catch (error) {
-      console.error('Friendbot funding error:', error)
+      void captureError(error, { operation: 'friendbot:fund', walletAddress: address })
       setFundingStatus('error')
       const message =
         error instanceof Error ? error.message : 'Failed to fund account. Please try again.'

@@ -125,6 +125,22 @@ npm run test:e2e       # headless
 E2E tests require a running dev server (`npm run dev` in a separate terminal)
 or will start it automatically depending on the config.
 
+#### Visual snapshot baselines
+
+Playwright compares screenshots against committed PNG baselines stored in
+`e2e/__screenshots__/`. Baselines must be generated on Linux (via CI) — PNGs
+produced on Windows or macOS use different font rendering and will cause
+false-positive failures for everyone else. **Do not commit locally generated
+snapshots.**
+
+To regenerate baselines after an intentional UI change, trigger the
+**Update Playwright Snapshots** GitHub Actions workflow on your branch
+(Actions → Update Playwright Snapshots → Run workflow). It commits the correct
+Linux-rendered PNGs back to your branch automatically.
+
+See [docs/TESTING.md](./docs/TESTING.md) for the full workflow, when to
+regenerate, and how CI handles missing baselines.
+
 ### Contract tests (Rust)
 
 ```bash
