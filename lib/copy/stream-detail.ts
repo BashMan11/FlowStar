@@ -147,3 +147,32 @@ export const streamDetailCopy = {
     network: "Network",
   },
 };
+
+// QrShareDialog strings — issue #954
+export const qrShareDialogCopy = {
+  dialogTitle: "Share stream",
+  dialogDescription: (id: string) =>
+    `Scan this QR code to open stream #${id} on any device.`,
+  copyLinkAriaLabel: "Copy stream link",
+  downloadQrButton: "Download QR",
+  amountLabel: "Amount",
+  recipientLabel: "Recipient",
+  statusLabel: "Status",
+  copyLinkSuccessToast: "Link copied to clipboard",
+  downloadQrSuccessToast: "QR code downloaded",
+  qrFileName: (id: string) => `flowstar-stream-${id}-qr.png`,
+}
+
+// DownloadReceiptButton strings — issue #955
+export const downloadReceiptButtonCopy = {
+  triggerLabelFull: "Download Receipt",
+  triggerLabelShort: "Receipt",
+  viewPrintHtmlItem: "View & Print HTML",
+  downloadCsvItem: "Download CSV",
+  csvSuccessTitle: "Receipt downloaded",
+  csvSuccessDescription: (id: string) => `Saved as flowstar-receipt-${id}.csv`,
+  htmlSuccessTitle: "Receipt opened",
+  htmlSuccessDescription:
+    "A new window with your receipt has been opened. You can print it from there.",
+  csvFileName: (id: string) => `flowstar-receipt-${id}.csv`,
+}

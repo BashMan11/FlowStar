@@ -132,3 +132,27 @@ export const createFormCopy = {
     tokenContractQueryFailed: "Failed to query token contract",
   },
 };
+
+// CreateConfirmation dialog strings — issue #956
+export const createConfirmationCopy = {
+  dialogTitle: "Confirm stream creation",
+  dialogDescription:
+    "Review the details below. You\u2019ll sign two transactions: one token approval, then stream creation.",
+  streamDetailsSectionTitle: "Stream details",
+  recipientLabel: "Recipient",
+  tokenLabel: "Token",
+  totalAmountLabel: "Total amount",
+  rateLabel: "Rate",
+  startLabel: "Start",
+  endLabel: "End",
+  cliffLabel: "Cliff",
+  networkFeesSectionTitle: "Network fees",
+  baseFeeEstimateLabel: "Base fee estimate",
+  safetyBufferLabel: "Safety buffer (15%)",
+  totalEstimatedLabel: "Total estimated",
+  feeDisclaimerText:
+    "Fees are estimated from transaction simulation. Actual costs may vary based on network conditions.",
+  backButton: "Back",
+  confirmButton: "Confirm & sign",
+  pendingButton: "Creating\u2026",
+}
