@@ -17,7 +17,10 @@ import {
 } from "@/lib/stream-utils";
 import { calculateFeeBreakdown, TYPICAL_FEES } from "@/lib/fee-utils";
 import { useTokenPrice } from "@/hooks/use-token-price";
+import { createConfirmationCopy } from "@/lib/copy/create-form";
 import type { TokenInfo } from "@/types/stream";
+
+const copy = createConfirmationCopy;
 
 interface ConfirmationProps {
   open: boolean;
@@ -77,37 +80,34 @@ export function CreateConfirmation({
     <Dialog open={open} onOpenChange={(o) => !o && !pending && onCancel()}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Confirm stream creation</DialogTitle>
-          <DialogDescription>
-            Review the details below. You&apos;ll sign two transactions: one
-            token approval, then stream creation.
-          </DialogDescription>
+          <DialogTitle>{copy.dialogTitle}</DialogTitle>
+          <DialogDescription>{copy.dialogDescription}</DialogDescription>
         </DialogHeader>
 
         <div className="mt-2 space-y-4">
           <div>
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Stream details
+              {copy.streamDetailsSectionTitle}
             </h3>
             <Row
-              label="Recipient"
+              label={copy.recipientLabel}
               value={
                 <span className="font-mono">
                   {shortenAddress(recipient, 8)}
                 </span>
               }
             />
-            <Row label="Token" value={token.symbol} />
+            <Row label={copy.tokenLabel} value={token.symbol} />
             <Row
-              label="Total amount"
+              label={copy.totalAmountLabel}
               value={`${formatTokenAmount(totalAmount, token.decimals, 4)} ${token.symbol}`}
             />
-            <Row label="Rate" value={rate.perDay} />
-            <Row label="Start" value={formatDateTime(startTime)} />
-            <Row label="End" value={formatDateTime(endTime)} />
+            <Row label={copy.rateLabel} value={rate.perDay} />
+            <Row label={copy.startLabel} value={formatDateTime(startTime)} />
+            <Row label={copy.endLabel} value={formatDateTime(endTime)} />
             {cliffTime > startTime && (
               <Row
-                label="Cliff"
+                label={copy.cliffLabel}
                 value={
                   <>
                     {formatDateTime(cliffTime)}
@@ -126,11 +126,11 @@ export function CreateConfirmation({
           {/* Fee breakdown section */}
           <div className="border-t border-border pt-3 space-y-3">
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Network fees
+              {copy.networkFeesSectionTitle}
             </h3>
             <div className="space-y-2">
               <Row
-                label="Base fee estimate"
+                label={copy.baseFeeEstimateLabel}
                 value={
                   <span className="font-mono">
                     {(feeBreakdown.minFee / 1e7).toFixed(7)} XLM
@@ -139,7 +139,7 @@ export function CreateConfirmation({
               />
               {feeBreakdown.bufferFee > 0 && (
                 <Row
-                  label="Safety buffer (15%)"
+                  label={copy.safetyBufferLabel}
                   value={
                     <span className="font-mono">
                       {(feeBreakdown.bufferFee / 1e7).toFixed(7)} XLM
@@ -149,7 +149,7 @@ export function CreateConfirmation({
               )}
               <div className="flex items-start justify-between gap-4 border-t border-border bg-secondary/30 px-3 py-2 rounded">
                 <span className="text-sm font-medium text-foreground">
-                  Total estimated
+                  {copy.totalEstimatedLabel}
                 </span>
                 <span className="text-sm font-mono font-bold text-primary">
                   {(feeBreakdown.totalEstimated / 1e7).toFixed(7)} XLM
@@ -160,8 +160,7 @@ export function CreateConfirmation({
             <div className="flex items-start gap-2 rounded-lg bg-blue-500/10 border border-blue-500/30 p-2.5">
               <Info className="size-4 shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
               <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
-                Fees are estimated from transaction simulation. Actual costs may
-                vary based on network conditions.
+                {copy.feeDisclaimerText}
               </p>
             </div>
           </div>
@@ -169,10 +168,10 @@ export function CreateConfirmation({
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="ghost" onClick={onCancel} disabled={pending}>
-            Back
+            {copy.backButton}
           </Button>
           <Button onClick={onConfirm} disabled={pending}>
-            {pending ? "Creating…" : "Confirm & sign"}
+            {pending ? copy.pendingButton : copy.confirmButton}
           </Button>
         </div>
       </DialogContent>

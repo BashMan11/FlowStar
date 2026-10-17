@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Download, Sheet, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,8 +14,11 @@ import {
   generateReceiptHTML,
   downloadFile,
 } from '@/lib/receipt-utils'
+import { downloadReceiptButtonCopy } from '@/lib/copy/stream-detail'
 import type { StreamData } from '@/types/stream'
 import { toast } from 'sonner'
+
+const copy = downloadReceiptButtonCopy
 
 interface DownloadReceiptButtonProps {
   stream: StreamData
@@ -38,9 +40,9 @@ export function DownloadReceiptButton({
 
   function downloadCSV() {
     const csv = generateReceiptCSV(receipt)
-    downloadFile(csv, `flowstar-receipt-${stream.id}.csv`, 'text/csv')
-    toast.success('Receipt downloaded', {
-      description: `Saved as flowstar-receipt-${stream.id}.csv`,
+    downloadFile(csv, copy.csvFileName(stream.id), 'text/csv')
+    toast.success(copy.csvSuccessTitle, {
+      description: copy.csvSuccessDescription(stream.id),
     })
   }
 
@@ -54,8 +56,8 @@ export function DownloadReceiptButton({
     window.setTimeout(() => {
       URL.revokeObjectURL(url)
     }, 10_000)
-    toast.success('Receipt opened', {
-      description: 'A new window with your receipt has been opened. You can print it from there.',
+    toast.success(copy.htmlSuccessTitle, {
+      description: copy.htmlSuccessDescription,
     })
   }
 
@@ -64,18 +66,18 @@ export function DownloadReceiptButton({
       <DropdownMenuTrigger asChild>
         <Button variant="secondary" size="sm" className="gap-1.5">
           <Download className="size-4" />
-          <span className="hidden sm:inline">Download Receipt</span>
-          <span className="sm:hidden">Receipt</span>
+          <span className="hidden sm:inline">{copy.triggerLabelFull}</span>
+          <span className="sm:hidden">{copy.triggerLabelShort}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem onClick={openInBrowser}>
           <Printer className="size-4 mr-2" />
-          <span>View & Print HTML</span>
+          <span>{copy.viewPrintHtmlItem}</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={downloadCSV}>
           <Sheet className="size-4 mr-2" />
-          <span>Download CSV</span>
+          <span>{copy.downloadCsvItem}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

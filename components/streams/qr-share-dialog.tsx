@@ -14,7 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { StreamStatusBadge } from "@/components/streams/stream-status-badge";
 import { formatTokenAmount, shortenAddress } from "@/lib/stream-utils";
+import { qrShareDialogCopy } from "@/lib/copy/stream-detail";
 import type { StreamData, StreamStatus } from "@/types/stream";
+
+const copy = qrShareDialogCopy;
 
 interface QrShareDialogProps {
   open: boolean;
@@ -46,26 +49,26 @@ export function QrShareDialog({
     navigator.clipboard.writeText(streamUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-    toast.success("Link copied to clipboard");
+    toast.success(copy.copyLinkSuccessToast);
   }
 
   function downloadPng() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement("a");
-    link.download = `flowstar-stream-${stream.id}-qr.png`;
+    link.download = copy.qrFileName(stream.id);
     link.href = canvas.toDataURL("image/png");
     link.click();
-    toast.success("QR code downloaded");
+    toast.success(copy.downloadQrSuccessToast);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Share stream</DialogTitle>
+          <DialogTitle>{copy.dialogTitle}</DialogTitle>
           <DialogDescription>
-            Scan this QR code to open stream #{stream.id} on any device.
+            {copy.dialogDescription(stream.id)}
           </DialogDescription>
         </DialogHeader>
 
@@ -90,7 +93,7 @@ export function QrShareDialog({
             <button
               type="button"
               onClick={copyLink}
-              aria-label="Copy stream link"
+              aria-label={copy.copyLinkAriaLabel}
               className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
             >
               {copied ? (
@@ -109,24 +112,24 @@ export function QrShareDialog({
               onClick={downloadPng}
             >
               <Download className="size-4" />
-              Download QR
+              {copy.downloadQrButton}
             </Button>
           </div>
 
           <div className="w-full rounded-lg border border-border p-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Amount</span>
+              <span className="text-muted-foreground">{copy.amountLabel}</span>
               <span className="font-mono font-medium">
                 {formatTokenAmount(stream.depositedAmount, stream.token.decimals, 2)}{" "}
                 {stream.token.symbol}
               </span>
             </div>
             <div className="mt-1.5 flex items-center justify-between">
-              <span className="text-muted-foreground">Recipient</span>
+              <span className="text-muted-foreground">{copy.recipientLabel}</span>
               <span className="font-mono">{shortenAddress(stream.recipient, 5)}</span>
             </div>
             <div className="mt-1.5 flex items-center justify-between">
-              <span className="text-muted-foreground">Status</span>
+              <span className="text-muted-foreground">{copy.statusLabel}</span>
               <StreamStatusBadge status={status} />
             </div>
           </div>
