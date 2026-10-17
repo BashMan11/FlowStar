@@ -17,13 +17,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ConnectWalletButton } from '@/components/layout/connect-wallet-button'
 import { NotificationBell } from '@/components/layout/notification-bell'
+import { navigationCopy } from '@/lib/copy/navigation'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
-  { href: '/app', label: 'Dashboard' },
-  { href: '/app/streams', label: 'Streams' },
-  { href: '/app/analytics', label: 'Analytics' },
-  { href: '/app/settings', label: 'Settings' },
+  { href: '/app', label: navigationCopy.links.dashboard },
+  { href: '/app/streams', label: navigationCopy.links.streams },
+  { href: '/app/analytics', label: navigationCopy.links.analytics },
+  { href: '/app/settings', label: navigationCopy.links.settings },
 ]
 
 export function Navbar() {
@@ -63,11 +64,11 @@ export function Navbar() {
           {!isOnline && (
             <span
               role="status"
-              title="You're offline — showing cached data"
+              title={navigationCopy.offline.title}
               className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-600 dark:text-amber-400"
             >
               <WifiOff className="size-3.5" />
-              <span className="hidden sm:inline">Offline</span>
+              <span className="hidden sm:inline">{navigationCopy.offline.label}</span>
             </span>
           )}
           {networkMismatch ? (
@@ -76,16 +77,16 @@ export function Navbar() {
               size="sm"
               className="gap-1.5"
               disabled
-              aria-label="New stream (unavailable — wallet is on the wrong network)"
+              aria-label={navigationCopy.newStream.unavailableAriaLabel}
             >
               <Plus className="size-4" />
-              <span className="hidden sm:inline">New stream</span>
+              <span className="hidden sm:inline">{navigationCopy.newStream.label}</span>
             </Button>
           ) : (
             <Button asChild variant="ghost" size="sm" className="gap-1.5">
               <Link href="/app/create">
                 <Plus className="size-4" />
-                <span className="hidden sm:inline">New stream</span>
+                <span className="hidden sm:inline">{navigationCopy.newStream.label}</span>
               </Link>
             </Button>
           )}
@@ -95,13 +96,19 @@ export function Navbar() {
               <Button variant="ghost" size="sm" className="gap-1.5">
                 <Network className="size-4" />
                 <span className="hidden sm:inline">
-                  {network === 'mainnet' ? 'Mainnet' : 'Testnet'}
+                  {network === 'mainnet'
+                    ? navigationCopy.network.mainnet
+                    : navigationCopy.network.testnet}
                 </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setNetwork('testnet')}>Testnet</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setNetwork('mainnet')}>Mainnet</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setNetwork('testnet')}>
+                {navigationCopy.network.testnet}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setNetwork('mainnet')}>
+                {navigationCopy.network.mainnet}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -110,21 +117,21 @@ export function Navbar() {
               <Button variant="ghost" size="icon">
                 <Sun className="size-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                 <Moon className="absolute size-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                <span className="sr-only">Toggle theme</span>
+                <span className="sr-only">{navigationCopy.theme.toggle}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setTheme('light')}>
                 <Sun className="mr-2 size-4" />
-                Light
+                {navigationCopy.theme.light}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme('dark')}>
                 <Moon className="mr-2 size-4" />
-                Dark
+                {navigationCopy.theme.dark}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme('system')}>
                 <Monitor className="mr-2 size-4" />
-                System
+                {navigationCopy.theme.system}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -139,9 +146,11 @@ export function Navbar() {
         <div className="flex items-center gap-2 border-t border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-sm text-yellow-600 dark:text-yellow-400">
           <AlertTriangle className="size-4 shrink-0" />
           <span>
-            Your wallet is on <strong>{walletNetwork}</strong> — please switch to{' '}
-            <strong>{network}</strong> in Freighter settings. Transactions are disabled until you
-            switch.
+            {navigationCopy.networkMismatch.before}
+            <strong>{walletNetwork}</strong>
+            {navigationCopy.networkMismatch.switchTo}
+            <strong>{network}</strong>
+            {navigationCopy.networkMismatch.after}
           </span>
         </div>
       )}
